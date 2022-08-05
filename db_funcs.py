@@ -53,15 +53,8 @@ def get_data_from_db(db_name: str = 'conf.sqlite') -> tuple:
     return result
 
 
-def delete_table():
-    connect = sqlite3.connect('conf.sqlite')
-    cursor = connect.cursor()
-    cursor.execute("DROP TABLE data")
-    connect.commit()
-    connect.close()
-
-
-def delete_data():
+def delete_data() -> None:
+    """Функция удаляет информацию из таблицы БД"""
     connect = sqlite3.connect('conf.sqlite')
     cursor = connect.cursor()
     cursor.execute("DELETE FROM data")
@@ -69,7 +62,16 @@ def delete_data():
     connect.close()
 
 
-if __name__ == '__main__':
-    # print(get_data_from_db())
-    # delete_table()
+def change_data() -> tuple:
+    """Функция изменяет информацию в БД, в случае недействительного API KEY"""
+
+    print('Введен недействительный API KEY, пожалуйста, убедитесь в правильности вводимого ключа.')
+    print('API KEY можно найти по следующей ссылке: https://dadata.ru/profile/#info')
     delete_data()
+    data = get_data_from_db()
+    return data
+
+
+if __name__ == '__main__':
+    print(get_data_from_db())
+    # delete_data()

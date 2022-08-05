@@ -1,79 +1,14 @@
 import http
+import httpx
 from time import sleep
 
-import httpx
-from dadata import Dadata
-
 import db_funcs
-
-data = db_funcs.get_data_from_db()
-token = data[1]
-language = data[2]
-
-
-def clarify_address(dadata, result):
-    for i in range(1, len(result) + 1):
-        print(f"({i}) - {result[i - 1]['unrestricted_value'].replace('()', '')}")
-    print('\nВыберите подходящий вариант из списка. Если подходящий вариант отсутствует, введите 0')
-    num_of_var = int(input('Введите порядковый номер: '))
-    print()
-
-    if num_of_var == 0:
-        print('Попробуйте уточнить запрос. Введите искомый адрес в следующем формате: \"город\" \"улица\" \"дом\" ')
-        print('Для выхода из программы введите \"exit\"')
-        new_search = input('Введите новый адрес: ')
-        if new_search == 'exit':
-            return ['end']
-        new_result = dadata.suggest("address", query=new_search, count=20, language=language)
-    else:
-        new_result = dadata.suggest("address", query=result[num_of_var - 1]['unrestricted_value'], count=20,
-                                    language=language)
-
-    if new_result == result:
-        new_result = dadata.suggest("address", query=result[num_of_var - 1]['unrestricted_value'], count=1,
-                                    language=language)
-    return new_result
-
-
-def define_cords():
-    with Dadata(token) as dadata:
-
-        print('Для получения точных координат, введите искомый адрес (без кавычек)')
-        print('Например: \"москва вавилова 19\"')
-        print('Для выхода из программы введите \"exit\"')
-        query = input('Введите адрес: ').strip()
-
-        if query == 'exit':
-            return 'end'
-
-        result = dadata.suggest("address", query=query, count=20, language=language)
-
-        while len(result) > 1:
-
-            if int(result[0]['data']['fias_level']) >= 8:
-                break
-
-            result = clarify_address(dadata, result)
-
-            if result == ['end']:
-                return 'end'
-
-        if type(result) == list and result:
-            result = result[0]
-
-        if not result:
-            print('\nПо вашему запросу не найдено ни одного адреса. Попробуйте ввести адрес в следующем формате:')
-            print(r'"город улица дом"')
-            return
-
-        print('\n\n\n\n\n')
-        print(f"Запрошенный адрес: {result['unrestricted_value']}")
-        print('Координаты:')
-        print(f"Широта - {result['data']['geo_lat']}")
-        print(f"Долгота - {result['data']['geo_lon']}\n\n")
+import dadata_funcs
 
 
 if __name__ == '__main__':
+
+    data = db_funcs.get_data_from_db()
 
     print('Добро пожаловать!')
     print('Данная программа поможет вам определить географические координаты по адресу')
@@ -81,17 +16,12 @@ if __name__ == '__main__':
 
     while True:
         try:
-            res = define_cords()
+            res = dadata_funcs.define_cords(data)
             if res == 'end':
                 break
-        except httpx.HTTPStatusError as e:
+        except httpx.HTTPStatusError:
             if http.HTTPStatus.FORBIDDEN == 403:
-                print('Введен недействительный API KEY, пожалуйста, убедитесь в правильности вводимого ключа.')
-                print('API KEY можно найти по следующей ссылке: https://dadata.ru/profile/#info')
-                db_funcs.delete_data()
-                data = db_funcs.get_data_from_db()
-                token = data[1]
-                language = data[2]
+                data = db_funcs.change_data()
 
     print('\n\nБлагодарим за использование нашего сервиса. Будем рады видеть вас снова!\n\n')
     sleep(3)
